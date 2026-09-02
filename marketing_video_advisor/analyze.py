@@ -189,9 +189,126 @@ def analyze_bomb(keyword):
                 }
     return None
 
+
+def _number(value):
+    """接口字段可能是空字符串，统一转成非负整数。"""
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _latest_video_date(videos):
+    """尽量从接口格式化日期取得最近发布日；字段异常时宁可不判断。"""
+    candidates = []
+    for video in videos:
+        raw = str(video.get("create_time_formatted") or "")
+        for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y/%m/%d"):
+            try:
+                candidates.append(datetime.strptime(raw[:16], fmt))
+                break
+            except ValueError:
+                continue
+    return max(candidates) if candidates else None
+
+
+def diagnose_account(acc, keyword):
+    """将公开账号数据转成可解释、可执行的经营诊断。
+
+    不把封面、出镜表现或视频画面当作已验证事实：本函数仅使用接口返回的
+    主页签名、作品标题、发布时间和互动字段，所有结论均给出相应证据。
+    """
+    videos = acc.get("videos", [])
+    stats = acc.get("stats", {})
+    profile = acc.get("profile", {})
+    signature = str(profile.get("signature") or "").strip()
+    descriptions = [str(v.get("desc") or "") for v in videos]
+    text = " ".join([signature] + descriptions).lower()
+    fans = _number(stats.get("follower_count"))
+    works = _number(stats.get("aweme_count")) or len(videos)
+    avg_likes = _number(acc.get("avg_likes"))
+    likes = [_number(v.get("statistics", {}).get("digg_count")) for v in videos]
+    comments = [_number(v.get("statistics", {}).get("comment_count")) for v in videos]
+    shares = [_number(v.get("statistics", {}).get("share_count")) for v in videos]
+    collects = [_number(v.get("statistics", {}).get("collect_count")) for v in videos]
+    latest = _latest_video_date(videos)
+    days_since = (datetime.now() - latest).days if latest else None
+    top_like = max(likes) if likes else 0
+    top_ratio = round(top_like / avg_likes, 1) if avg_likes else None
+    interaction_avg = round((sum(likes) + sum(comments) + sum(shares) + sum(collects)) / len(videos)) if videos else 0
+
+    # 当前定位：依据签名和作品标题中可观察到的线索，不假装读过视频画面。
+    business_terms = [x for x in ("产业园", "厂房", "独栋", "写字楼", "企业选址", "招商", keyword.lower()) if x and x.lower() in text]
+    location_terms = [x for x in ("太原", "坞城", "山西", "园区") if x.lower() in text]
+    has_contact = any(ch.isdigit() for ch in signature) or any(x in signature for x in ("联系", "私信", "咨询", "电话"))
+    has_customer = any(x in text for x in ("老板", "企业", "创业", "工厂", "公司", "客户"))
+    has_offer = any(x in text for x in ("平米", "㎡", "户型", "出租", "出售", "租", "买", "独栋"))
+
+    positioning_parts = []
+    if location_terms:
+        positioning_parts.append("本地产业载体")
+    if business_terms:
+        positioning_parts.append("企业选址/园区招商")
+    if has_offer:
+        positioning_parts.append("厂房与独栋空间供给")
+    positioning = " · ".join(positioning_parts) if positioning_parts else "定位信号不足，暂无法从公开字段确认主营方向"
+    audience = "企业老板、选址决策者及产业服务合作方" if has_customer else "目标客户在公开文案中未被稳定点明"
+
+    # 健康度用于排优先级，不以“算法评分”冒充真实平台权重。
+    positioning_score = 0
+    positioning_score += 35 if business_terms else 0
+    positioning_score += 25 if location_terms else 0
+    positioning_score += 20 if has_customer else 0
+    positioning_score += 20 if has_contact else 0
+    cadence_score = 70 if days_since is not None and days_since <= 14 else 45 if days_since is not None and days_since <= 30 else 20 if days_since is not None else 0
+    cadence_score = min(100, cadence_score + min(len(acc.get("month_pub", {})) * 5, 25))
+    efficiency_score = 65 if avg_likes >= 100 else 45 if avg_likes >= 30 else 25
+    if top_ratio and top_ratio >= 4:
+        efficiency_score -= 15  # 头部断层意味着可复制性不足
+    conversion_score = 50 + (25 if has_contact else 0) + (15 if has_customer else 0) + (10 if has_offer else 0)
+
+    risks = []
+    actions = []
+    if days_since is None:
+        risks.append(("更新节奏无法判定", "作品发布时间字段缺失，先补齐近 30 天发布记录后再判断频次。"))
+    elif days_since > 30:
+        risks.append(("更新已中断", f"最近一条公开作品距今约 {days_since} 天，账号难以累积稳定推荐信号。"))
+        actions.append(("P0｜恢复稳定发布", "先连续 4 周每周 3 条：周一选址问题、周三园区实景/节点、周五客户决策案例；先稳定频率，再追爆款。", "以每周发布≥3条、连续4周完成率为验收。"))
+    elif days_since > 14:
+        risks.append(("更新间隔偏长", f"最近一条公开作品距今约 {days_since} 天，建议将发布间隔压缩到 3 天以内。"))
+        actions.append(("P0｜建立内容周节奏", "固定每周 3 条，提前一次性写完标题、口播和拍摄清单，避免临时断更。", "以连续28天发布≥8条为验收。"))
+    if len(acc.get("month_pub", {})) <= 2:
+        risks.append(("有效样本不足", f"接口返回 {len(videos)} 条作品，但仅覆盖 {len(acc.get('month_pub', {}))} 个活跃月份，无法形成稳定内容模型。"))
+    if top_ratio and top_ratio >= 4:
+        risks.append(("爆款依赖明显", f"最高赞 {top_like}，约为均赞的 {top_ratio} 倍；头部内容带动强，但中位内容承接不足。"))
+        actions.append(("P1｜复用有效选题结构", "把 Top3 作品分别拆成“开头问题—目标客户—空间/区位证据—行动引导”，每个结构至少衍生 3 条，不直接复制原文案。", "新发9条中，至少6条使用已验证结构；均赞较当前提升30%。"))
+    if not has_customer or not has_offer or not has_contact:
+        missing = "、".join(x for x, ok in (("目标客户", has_customer), ("核心产品/面积", has_offer), ("明确咨询动作", has_contact)) if not ok)
+        risks.append(("主页转化信息不完整", f"签名中未稳定呈现：{missing}。访问者需要自行猜测“适不适合我、下一步怎么问”。"))
+        actions.append(("P0｜重写主页三件套", "头像表达“人/品牌”，昵称保留区域+业务，签名按“服务谁｜有什么空间/价值｜在哪｜如何咨询”四句式重写；置顶三条分别讲园区总览、主力户型、到访流程。", "新用户在10秒内能回答：你服务谁、卖什么、在哪、怎样咨询。"))
+    if interaction_avg and fans and interaction_avg / max(fans, 1) < 0.01:
+        risks.append(("互动与粉丝体量不匹配", f"近 {len(videos)} 条样本平均总互动约 {interaction_avg}，需优先测试更强的问题型开头与本地决策场景。"))
+    if not actions:
+        actions.append(("P1｜建立可复制内容栏目", "保留现有表现较好的话题，新增“企业选址避坑、真实空间答疑、园区进度与配套、客户决策故事”四类固定栏目。", "30天内每类至少发布2条，并按完播、咨询、到访线索复盘。"))
+    if not any(title.startswith("P0") for title, _, _ in actions):
+        actions.insert(0, ("P0｜明确账号一句话定位", "将主页、置顶视频和前3秒口播统一为同一承诺：为哪类企业解决什么选址/空间问题。", "随机抽查3个入口，定位表述一致。"))
+
+    return {
+        "positioning": positioning,
+        "audience": audience,
+        "evidence": f"公开签名与 {len(videos)} 条作品标题中识别到：{('、'.join(business_terms[:5]) or '有效业务关键词不足')}。",
+        "latest": latest.strftime("%Y-%m-%d") if latest else "未取得",
+        "days_since": days_since,
+        "scores": [("定位清晰度", positioning_score), ("更新稳定度", cadence_score), ("内容效率", max(0, efficiency_score)), ("转化准备度", min(100, conversion_score))],
+        "risks": risks,
+        "actions": actions[:4],
+        "content_note": "本报告的定位与问题判断仅依据接口返回的公开字段、作品标题、发布时间及互动数据；封面、画面品质、出镜表现和评论语义需在取得视频素材或逐条转写后再补充判断。",
+    }
+
 # ---------- 报告层 ----------
 def build_html(acc, benchmark, bomb, hot, keyword, costs):
     def esc(x): return html.escape(str(x))
+    diagnosis = diagnose_account(acc, keyword)
 
     # KPI
     st = acc["stats"]
@@ -250,6 +367,19 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
     if not hot_rows:
         hot_rows = "<tr><td colspan=3>热榜获取失败</td></tr>"
 
+    score_cards = "".join(
+        f'<div class="score"><b>{esc(label)}</b><span>{score}<small>/100</small></span></div>'
+        for label, score in diagnosis["scores"]
+    )
+    risk_html = "".join(
+        f'<div class="risk"><b>{esc(title)}</b><p>{esc(detail)}</p></div>'
+        for title, detail in diagnosis["risks"]
+    ) or "<div class='card'>当前样本未发现需优先处理的结构性风险；仍建议持续跟踪发布节奏与咨询线索。</div>"
+    action_rows = "".join(
+        f'<tr><td><b>{esc(priority)}</b></td><td>{esc(action)}</td><td>{esc(metric)}</td></tr>'
+        for priority, action, metric in diagnosis["actions"]
+    )
+
     name = acc["identity"].get("nickname", "该账号")
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -271,6 +401,14 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
   .kpi .item {{ flex:1 1 18%; min-width:110px; background:#0f2f57; color:#fff; border-radius:8px; padding:10px; text-align:center; }}
   .kpi .num {{ font-size:20px; font-weight:700; color:#ffb347; }}
   .kpi .lab {{ font-size:10.5px; opacity:.9; }}
+  .scoregrid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0 14px; }}
+  .score {{ border:1px solid #d7e1ef; border-radius:8px; padding:10px; background:#f8fbff; color:#274766; }}
+  .score b {{ display:block; font-size:11px; font-weight:600; }}
+  .score span {{ display:block; margin-top:3px; color:#e8731c; font-size:23px; font-weight:700; }}
+  .score small {{ font-size:10px; color:#718096; margin-left:2px; }}
+  .risk {{ border-left:4px solid #e8731c; background:#fff8ef; padding:9px 12px; margin:7px 0; border-radius:0 6px 6px 0; }}
+  .risk p {{ margin-top:2px; color:#5e503d; }}
+  .label {{ display:inline-block; padding:2px 7px; margin-right:5px; border-radius:99px; background:#e8f0fb; color:#0f4c81; font-size:10.5px; }}
   blockquote {{ border-left:4px solid #e8731c; background:#fff7ed; padding:10px 14px; margin:10px 0; border-radius:0 6px 6px 0; color:#7c2d12; }}
   .cover {{ text-align:center; padding:60px 20px 30px; }}
   .cover h1 {{ font-size:30px; margin-bottom:10px; }}
@@ -290,21 +428,36 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
 {kpi}
 <div class="card"><b>签名：</b>{esc(acc['profile'].get('signature', '无'))}</div>
 
-<h2>二、更新节奏</h2>
-<table><tr><th>月份</th><th>发布数</th></tr>{rows}</table>
+<h2>二、账号定位与经营结论</h2>
+<div class="card"><span class="label">当前定位</span><b>{esc(diagnosis['positioning'])}</b><br>
+<span class="label">目标人群</span>{esc(diagnosis['audience'])}<br>
+<span class="label">判断依据</span>{esc(diagnosis['evidence'])}</div>
+<div class="scoregrid">{score_cards}</div>
+<div class="card"><b>一句话结论：</b>账号已有产业空间/企业选址的业务信号，但下一阶段不应只追求播放量，应优先把“定位一致、稳定更新、咨询转化”做成闭环；以下问题和动作按公开数据优先级排序。</div>
 
-<h2>三、爆款 Top5</h2>
+<h3>优先问题</h3>
+{risk_html}
+
+<h3>30 天优化动作</h3>
+<table><tr><th>优先级</th><th>要做什么</th><th>如何验收</th></tr>{action_rows}</table>
+<div class="card"><b>数据边界：</b>{esc(diagnosis['content_note'])}</div>
+
+<h2>三、更新节奏</h2>
+<table><tr><th>月份</th><th>发布数</th></tr>{rows}</table>
+<div class="card">最近公开作品：{esc(diagnosis['latest'])}{f'（距今约 {diagnosis["days_since"]} 天）' if diagnosis['days_since'] is not None else '（接口未返回可识别发布时间）'}。</div>
+
+<h2>四、作品表现与可复制线索</h2>
 <table><tr><th>视频</th><th>点赞</th><th>转发</th><th>时间</th></tr>{top_rows}</table>
-<div class="card">共 {len(acc['videos'])} 条作品，均赞 {acc['avg_likes']}；低于均赞 {acc['flat_count']} 条 —— 断层说明选题质量不稳定。</div>
+<div class="card">共 {len(acc['videos'])} 条作品，均赞 {acc['avg_likes']}；低于均赞 {acc['flat_count']} 条。Top 内容只代表当前有效的标题/主题信号，需结合逐条转写后再判断完整话术与镜头结构。</div>
 
 <div class="pagebreak"></div>
-<h2>四、对标账号矩阵（{len(benchmark)} 个）</h2>
+<h2>五、对标账号矩阵（{len(benchmark)} 个）</h2>
 <table><tr><th>#</th><th>账号</th><th>粉丝</th><th>获赞</th><th>作品</th><th>简介</th></tr>{bm_rows}</table>
 
-<h2>五、行业爆款拆解（{esc(bomb['author']) if bomb else '—'}）</h2>
+<h2>六、行业爆款拆解（{esc(bomb['author']) if bomb else '—'}）</h2>
 {bomb_html}
 
-<h2>六、抖音实时热榜 Top10</h2>
+<h2>七、抖音实时热榜 Top10</h2>
 <table><tr><th>排名</th><th>话题</th><th>热度</th></tr>{hot_rows}</table>
 <div class="card">建议：每周从热榜挑 1-2 条与行业相关的热点做内容，蹭流量。</div>
 
