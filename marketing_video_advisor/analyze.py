@@ -16,6 +16,7 @@ import argparse
 import html
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,7 +29,7 @@ def load_config():
     """密钥只能通过当前用户的环境/私密目录注入，绝不随插件分发。"""
     return {
         "api_base": os.environ.get("DOUYIN_API_BASE", "https://token.spaceagents.cn"),
-        "api_key": os.environ.get("DOUYIN_API_KEY", ""),
+        "api_key": os.environ.get("SPACEAGENTS_AUTO_API_KEY") or os.environ.get("DOUYIN_API_KEY", ""),
     }
 
 CFG = load_config()
@@ -315,11 +316,12 @@ def main():
     ap.add_argument("url", help="抖音账号链接（主页/分享短链均可）")
     ap.add_argument("--keyword", default="产业园", help="行业关键词（对标/爆款搜索用）")
     ap.add_argument("--out", default=None, help="报告文件名（不含扩展名）")
+    ap.add_argument("--out-dir", default=".", help="HTML/PDF 报告输出目录")
     ap.add_argument("--no-benchmark", action="store_true", help="跳过对标与爆款拆解，只做账号体检")
     ap.add_argument("--confirm-paid", action="store_true", help="确认本次完整检索会使用付费第三方数据服务")
     args = ap.parse_args()
     if not KEY:
-        ap.error("未配置 DOUYIN_API_KEY；请在对话中授权后写入当前工作区私密目录")
+        ap.error("未配置 SPACEAGENTS_AUTO_API_KEY（或 DOUYIN_API_KEY）；请在算力中心环境中运行或由用户授权配置")
     if not args.no_benchmark and not args.confirm_paid:
         ap.error("完整对标/爆款检索会产生第三方数据服务费用；确认后增加 --confirm-paid，或使用 --no-benchmark 做基础体检")
 
@@ -363,25 +365,35 @@ def main():
     print("④ 生成报告")
     html_str = build_html(acc, benchmark, bomb, hot, args.keyword, costs)
     out_name = args.out or f"抖音账号分析-{name}"
-    out_html = os.path.join(os.getcwd(), out_name + ".html")
+    os.makedirs(args.out_dir, exist_ok=True)
+    out_html = os.path.join(args.out_dir, out_name + ".html")
     with open(out_html, "w", encoding="utf-8") as f:
         f.write(html_str)
 
     # 尝试转 PDF（本机有 Chrome 时）
     pdf_path = None
     chrome_candidates = [
+        os.environ.get("CHROME_PATH", ""),
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        os.path.join(os.environ.get("PROGRAMFILES", ""), "Google/Chrome/Application/chrome.exe"),
+        os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Microsoft/Edge/Application/msedge.exe"),
+        shutil.which("google-chrome") or "",
+        shutil.which("chromium") or "",
+        shutil.which("msedge") or "",
     ]
-    chrome = next((c for c in chrome_candidates if os.path.exists(c)), None)
+    chrome = next((c for c in chrome_candidates if c and os.path.exists(c)), None)
     if chrome:
-        pdf_path = os.path.join(os.getcwd(), out_name + ".pdf")
+        pdf_path = os.path.join(args.out_dir, out_name + ".pdf")
         subprocess.run(
             [chrome, "--headless=new", "--disable-gpu", "--no-sandbox",
              f"--print-to-pdf={pdf_path}", out_html],
             capture_output=True, timeout=120,
         )
-        print(f"  ✓ PDF：{os.path.basename(pdf_path)}")
+        if os.path.isfile(pdf_path):
+            print(f"  ✓ PDF：{os.path.basename(pdf_path)}")
+        else:
+            print("  - PDF 生成失败，已保留 HTML 报告")
 
     print(f"  ✓ HTML：{os.path.basename(out_html)}")
     print(f"\n完成！报告已生成（成本约 ¥{costs}）。")
