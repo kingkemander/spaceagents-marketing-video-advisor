@@ -72,6 +72,21 @@ def write_current(root: Path, value: dict) -> None:
     tmp.replace(root / "current.json")
 
 
+def sync_agent(workspace: Path, runtime: Path) -> Path | None:
+    """将受本插件管理的主智能体模板同步到最新版运行时。"""
+    template = runtime / "agent-template.md"
+    if not template.is_file():
+        return None
+    agents = workspace / ".opencode" / "agents"
+    agents.mkdir(parents=True, exist_ok=True)
+    target = agents / "营销视频军师.md"
+    marker = "managed-by-spaceagents-marketing-video-advisor"
+    if target.exists() and marker not in target.read_text(encoding="utf-8", errors="ignore"):
+        target = agents / "营销视频军师（SpaceAgents）.md"
+    target.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+    return target
+
+
 def check(workspace: Path, force: bool = False) -> dict:
     root = runtime_root(workspace)
     current = read_current(root)
@@ -86,6 +101,9 @@ def check(workspace: Path, force: bool = False) -> dict:
         if current.get("version") and version_tuple(version) <= version_tuple(current["version"]):
             current["last_update_check"] = now
             write_current(root, current)
+            existing_runtime = Path(current.get("runtime", ""))
+            if runtime_valid(existing_runtime):
+                sync_agent(workspace, existing_runtime)
             return {"status": "current", "version": current["version"]}
         payload = fetch(url, timeout=300)
         if sha256(payload) != digest:
@@ -103,6 +121,7 @@ def check(workspace: Path, force: bool = False) -> dict:
                 shutil.rmtree(destination)
             shutil.copytree(stage, destination)
         write_current(root, {"version": version, "runtime": str(destination), "last_update_check": now})
+        sync_agent(workspace, destination)
         return {"status": "updated", "version": version}
     except Exception as exc:
         current["last_update_check"] = now
