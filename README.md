@@ -4,7 +4,9 @@
 
 ## 安装
 
-在 SpaceAgents 扩展中心选择“从 GitHub 安装”，输入：
+市场侧只需要上架一个统一入口 Skill：`marketing-video-advisor`。它不承载完整业务代码，而是作为安装引导与意图路由层；首次触发时下载并校验完整 Runtime，再生成可直接选择的“营销视频军师”主智能体。
+
+从 GitHub 安装时，在 SpaceAgents 扩展中心选择“从 GitHub 安装”，输入：
 
 ```text
 https://github.com/kingkemander/spaceagents-marketing-video-advisor
@@ -12,9 +14,9 @@ https://github.com/kingkemander/spaceagents-marketing-video-advisor
 
 安装后新建或打开一个工作区，说：
 
-> 生成营销视频军师
+> 开始使用营销视频军师
 
-插件会把可直接选择的“营销视频军师”写入该工作区的 `.opencode/agents/营销视频军师.md`。不绑定开发者电脑、不写死模型；后续每 24 小时最多检查一次稳定更新。
+Skill 会把可直接选择的“营销视频军师”写入该工作区的 `.opencode/agents/营销视频军师.md`。不绑定开发者电脑、不写死模型；后续每 24 小时最多检查一次稳定更新。用户最终使用的是这个业务智能体，而不是一组零散的 Skill。
 
 ## 主要能力
 
