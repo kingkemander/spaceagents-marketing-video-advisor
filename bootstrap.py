@@ -14,9 +14,9 @@ import zipfile
 from pathlib import Path
 
 REPO = "kingkemander/spaceagents-marketing-video-advisor"
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 RUNTIME_URL = f"https://github.com/{REPO}/releases/download/v{VERSION}/spaceagents-marketing-video-advisor-runtime-v{VERSION}.zip"
-RUNTIME_SHA256 = "a0ca19f1279e06707725c1efdde375108a88b670892efb12d57a95d24982ebfe"
+RUNTIME_SHA256 = "8567066444ba491d66fdade06ae706ee7b85ee9e112189001893cd961d8e5fd4"
 PLUGIN_ID = "spaceagents-marketing-video-advisor"
 
 

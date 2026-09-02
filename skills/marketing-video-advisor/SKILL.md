@@ -19,7 +19,7 @@ description: 安装、更新或使用“营销视频军师”。适用于账号�
 执行前把 `<WORKSPACE>` 替换为当前工作区绝对路径：
 
 ```bash
-python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.1/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.1.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='a4eebc3d187868617e4a35fe446a80815cd8f0046bc3d640eacad62a433110b8','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.1.py" --workspace "<WORKSPACE>"
+python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.2/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.2.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='975312d14fae9f168a66b4de1598f867e52f115c3c53b6627e04252587c3d638','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.2.py" --workspace "<WORKSPACE>"
 ```
 
 完成后提醒用户新建会话，再从“智能体”下拉选择“营销视频军师”。不要声称它会自动代替用户登录抖音、发布作品或绕过平台限制。

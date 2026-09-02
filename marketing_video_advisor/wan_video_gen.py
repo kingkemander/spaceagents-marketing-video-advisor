@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wan 3.0 多参考招商视频生成脚本（阿里云百炼 DashScope）
-=========================================================
-一条龙：素材上传 → 创建视频任务 → 轮询 → 下载 → 字幕烧录 → BGM 混音 → 终版
+Wan 3.0 多参考视频生成脚本（SpaceAgents AutoApi）
+====================================================
+一条龙：素材准备 → AutoApi chat/completions 多模态提交 → 平台完成 → 下载 → 字幕烧录 → BGM 混音 → 终版
 
 用法示例：
   # 横屏 16:9 招商片（人物+场景+音色，10 秒）
@@ -24,7 +24,7 @@ Wan 3.0 多参考招商视频生成脚本（阿里云百炼 DashScope）
     --subtitle "0.3-3|850万，买一栋1400平米的独栋。" --subtitle "3.2-7|独立入口、独立动线..." \
     --bgm bgm.mp3 --output 招商片-竖屏.mp4
 
-Key：环境变量 DASHSCOPE_API_KEY 或 ~/.config/spaceagents-seedance/dashscope.key
+Key：环境变量 SPACEAGENTS_AUTO_API_KEY（由 SpaceAgents 注入，不写入文件）
 """
 
 import argparse
@@ -38,23 +38,13 @@ import urllib.request
 import urllib.error
 
 # ---------- 配置 ----------
-API_BASE = "https://llm-coge565i4eehwuk9.cn-beijing.maas.aliyuncs.com/api/v1"
-SECRET_FILE = os.path.expanduser("~/.config/spaceagents-seedance/dashscope.key")
+AUTOAPI_BASE = "https://token.spaceagents.cn"
 DEFAULT_OUT = "artifacts/videos"
 
 # ---------- Key ----------
 def get_key():
-    k = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("ALIYUN_DASHSCOPE_API_KEY")
-    if k:
-        return k.strip()
-    try:
-        with open(SECRET_FILE) as f:
-            k = f.read().strip()
-        if k:
-            return k
-    except Exception:
-        pass
-    return None
+    k = os.environ.get("SPACEAGENTS_AUTO_API_KEY") or os.environ.get("AUTOAPI_API_KEY")
+    return k.strip() if k else None
 
 # ---------- 素材处理 ----------
 def to_data_uri(path):
@@ -101,54 +91,37 @@ def to_media_url(v, allow_public_upload=False):
 
 # ---------- 任务 ----------
 def create_task(key, prompt, images, audios, duration, resolution, ratio, model, allow_public_upload=False):
-    media = []
+    """AutoApi 兼容接口：平台完成任务后同步返回 video_url。"""
+    content = [{"type": "text", "text": prompt}]
     for i in images:
-        media.append({"type": "reference_image", "url": to_media_url(i, allow_public_upload)})
+        content.append({"type": "image_url", "image_url": {"url": to_media_url(i, allow_public_upload)}})
     for a in audios:
-        media.append({"type": "reference_audio", "url": to_media_url(a, allow_public_upload)})
+        content.append({"type": "audio_url", "audio_url": {"url": to_media_url(a, allow_public_upload)}})
     payload = {
         "model": model,
-        "input": {"prompt": prompt, "media": media},
-        "parameters": {"resolution": resolution, "ratio": ratio, "duration": duration},
+        "messages": [{"role": "user", "content": content}],
+        "resolution": resolution,
+        "ratio": ratio,
+        "duration": duration,
     }
     req = urllib.request.Request(
-        API_BASE + "/services/aigc/video-generation/video-synthesis",
+        AUTOAPI_BASE + "/v1/chat/completions",
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}",
-                 "X-DashScope-Async": "enable"}, method="POST")
+                 }, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with urllib.request.urlopen(req, timeout=2000) as r:
             d = json.loads(r.read())
-        return d.get("output", {}).get("task_id")
-    except urllib.error.HTTPError as e:
-        print("❌ 创建任务失败:", e.read().decode(errors="replace")[:400])
-        return None
-
-def poll_task(key, task_id, timeout=1800):
-    deadline = time.time() + timeout
-    last = ""
-    while time.time() < deadline:
-        req = urllib.request.Request(f"{API_BASE}/tasks/{task_id}",
-                                     headers={"Authorization": f"Bearer {key}"}, method="GET")
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                d = json.loads(r.read())
-        except Exception as e:
-            print("  查询异常:", str(e)[:60])
-            time.sleep(10)
-            continue
-        st = d.get("output", {}).get("task_status")
-        if st != last:
-            print(f"⏳ 状态: {st}")
-            last = st
-        if st == "SUCCEEDED":
-            return d.get("output", {}).get("video_url")
-        if st in ("FAILED", "CANCELED", "UNKNOWN"):
-            print("❌ 任务失败:", json.dumps(d, ensure_ascii=False)[:300])
+        if d.get("status") != "succeeded":
+            print("❌ 任务未成功:", json.dumps(d, ensure_ascii=False)[:500])
             return None
-        time.sleep(10)
-    print("⏰ 轮询超时")
-    return None
+        url = (d.get("output") or {}).get("video_url")
+        if not url:
+            print("❌ 未返回 video_url:", json.dumps(d, ensure_ascii=False)[:500])
+        return url
+    except urllib.error.HTTPError as e:
+        print("❌ AutoApi 请求失败:", e.read().decode(errors="replace")[:500])
+        return None
 
 def download(url, path):
     with urllib.request.urlopen(url, timeout=300) as r:
@@ -238,7 +211,8 @@ def main():
     ap.add_argument("--duration", type=int, default=10, help="时长秒数 2-30")
     ap.add_argument("--resolution", default="720P", choices=["480P", "720P", "1080P"])
     ap.add_argument("--ratio", default="16:9", choices=["16:9", "9:16", "1:1", "4:3", "3:4", "adaptive"])
-    ap.add_argument("--model", default="wan3.0-video", choices=["wan3.0-video", "wan3.0-video-prime"])
+    ap.add_argument("--model", default="wan3.0-video", help="AutoApi 模型名，默认 wan3.0-video")
+    ap.add_argument("--api-key", help="仅本次覆盖环境变量；不要把 Key 写入脚本或仓库")
     ap.add_argument("--subtitle", action="append", default=[], help="字幕，格式：开始秒-结束秒|文本（可多次）")
     ap.add_argument("--bgm", help="BGM 音频文件路径")
     ap.add_argument("--output", help="输出文件名（含路径或相对路径）")
@@ -246,9 +220,9 @@ def main():
     ap.add_argument("--allow-public-upload", action="store_true", help="确认将本地音频上传到第三方公网中转站；默认禁止")
     args = ap.parse_args()
 
-    key = get_key()
+    key = args.api_key or get_key()
     if not key:
-        print("❌ 未找到 Key：设置 DASHSCOPE_API_KEY 或写入 ~/.config/spaceagents-seedance/dashscope.key")
+        print("❌ 未找到 Key：请设置 SPACEAGENTS_AUTO_API_KEY（SpaceAgents 通常会自动注入）")
         sys.exit(1)
 
     prompt = args.prompt
@@ -268,14 +242,8 @@ def main():
     final_path = os.path.join(out_dir, base)
 
     # 1. 创建任务
-    print("🚀 提交任务...")
-    tid = create_task(key, prompt, args.images, args.audios, args.duration, args.resolution, args.ratio, args.model, args.allow_public_upload)
-    if not tid:
-        sys.exit(1)
-
-    # 2. 轮询 + 下载
-    print("⏳ 等待生成（通常 1-5 分钟）...")
-    url = poll_task(key, tid)
+    print(f"🚀 提交任务 → SpaceAgents AutoApi（{AUTOAPI_BASE}）...")
+    url = create_task(key, prompt, args.images, args.audios, args.duration, args.resolution, args.ratio, args.model, args.allow_public_upload)
     if not url:
         sys.exit(1)
     download(url, raw_path)
