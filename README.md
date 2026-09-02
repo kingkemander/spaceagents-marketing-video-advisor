@@ -22,6 +22,7 @@ https://github.com/kingkemander/spaceagents-marketing-video-advisor
 - 昵称、简介、头像/背景方案、置顶内容与 30 天内容计划
 - 视频执行卡、数字人/多参考生视频、自动字幕和 BGM 后处理
 - 公开数据报告和发布前合规检查
+- 蚁小二 `yxer` CLI 多平台分发：抖音、视频号、小红书的账号检查、素材上传、预览校验、确认发布与数据回流
 
 ## 视频模型通道
 
@@ -34,3 +35,4 @@ https://github.com/kingkemander/spaceagents-marketing-video-advisor
 - API Key 仅由 SpaceAgents 环境变量或用户本机临时配置提供；仓库不含任何可用密钥。
 - 抖音数据与视频生成可能按次或按秒计费，智能体必须在执行前获得用户确认。
 - 默认不上传素材到第三方公开图床；如某服务要求外部素材 URL，必须单独征得确认。
+- 蚁小二 API Key、Client ID 与账号授权均由每位用户在自己的客户端/CLI 管理；正式发布始终需要用户确认。蚁小二 CLI 不覆盖评论与私信自动回复。
