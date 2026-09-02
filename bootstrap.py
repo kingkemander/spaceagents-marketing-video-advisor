@@ -9,21 +9,30 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
 
 REPO = "kingkemander/spaceagents-marketing-video-advisor"
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 RUNTIME_URL = f"https://github.com/{REPO}/releases/download/v{VERSION}/spaceagents-marketing-video-advisor-runtime-v{VERSION}.zip"
-RUNTIME_SHA256 = "a195e26355fa10f596b20784dd5299e6c581433111e1667fc365572ef34d7a0f"
+RUNTIME_SHA256 = "5953dfbb90eb12601b4f60ce30757e1bd39c85f572228fa9939753db96f0279b"
 PLUGIN_ID = "spaceagents-marketing-video-advisor"
 
 
 def download(url: str) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "SpaceAgents-MarketingVideoAdvisor/1"})
-    with urllib.request.urlopen(request, timeout=300) as response:
-        return response.read()
+    error = None
+    for attempt in range(3):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "SpaceAgents-MarketingVideoAdvisor/1"})
+            with urllib.request.urlopen(request, timeout=300) as response:
+                return response.read()
+        except Exception as exc:
+            error = exc
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"运行时下载失败（已重试 3 次）：{error}")
 
 
 def extract_safely(archive: Path, destination: Path) -> None:
