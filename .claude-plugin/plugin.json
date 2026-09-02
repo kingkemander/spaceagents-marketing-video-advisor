@@ -1,0 +1,24 @@
+{
+  "name": "spaceagents-marketing-video-advisor",
+  "version": "1.0.0",
+  "description": "面向抖音、视频号和小红书的对话式账号增长与营销视频生产智能体。提供账号诊断、对标、主页搭建、内容计划、视频执行卡和一键出片流程。",
+  "author": {
+    "name": "SpaceAgents"
+  },
+  "homepage": "https://github.com/kingkemander/spaceagents-marketing-video-advisor",
+  "repository": "https://github.com/kingkemander/spaceagents-marketing-video-advisor",
+  "license": "MIT",
+  "keywords": [
+    "douyin",
+    "video",
+    "marketing",
+    "creator",
+    "spaceagents"
+  ],
+  "skills": [
+    "./skills/marketing-video-advisor"
+  ],
+  "commands": [
+    "./commands/generate-marketing-video-advisor.md"
+  ]
+}

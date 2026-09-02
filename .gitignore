@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+dist/*.zip
+dist/*.txt
+artifacts/
+视频素材/
+.spaceagents/
+.opencode/
+*.mp4
+*.mov
+*.mp3
+*.wav
+.env
