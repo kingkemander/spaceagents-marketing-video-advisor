@@ -24,9 +24,17 @@ def sha256(data: bytes) -> str:
 
 
 def fetch(url: str, timeout: int = 90) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "SpaceAgents-MarketingVideoAdvisor/1"})
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return response.read()
+    error = None
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "SpaceAgents-MarketingVideoAdvisor/1"})
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                return response.read()
+        except Exception as exc:
+            error = exc
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"下载失败（已重试 3 次）：{error}")
 
 
 def version_tuple(value: str) -> tuple[int, ...]:
