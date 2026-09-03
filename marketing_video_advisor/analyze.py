@@ -382,6 +382,18 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
         f'<tr><td><b>{esc(priority)}</b></td><td>{esc(action)}</td><td>{esc(metric)}</td></tr>'
         for priority, action, metric in diagnosis["actions"]
     )
+    benchmark_names = "、".join(str(b.get("nick", "")) for b in benchmark[:3]) or "未获取到可用对标账号"
+    benchmark_signals = "；".join(
+        f"{b.get('nick', '对标账号')}（{b.get('fans', 0)} 粉丝，{str(b.get('sign') or '简介未提供')[:42]}）"
+        for b in benchmark[:3]
+    ) or "暂无对标简介数据"
+    reference_video = ""
+    if bomb:
+        reference_video = (
+            f'<div class="card"><b>参考视频：</b>{esc(bomb["author"])} · {esc(bomb["desc"])}<br>'
+            f'<span class="label">可借鉴</span>开头钩子、问题场景、证据顺序和行动引导；只学结构，不复制原文案。'
+            f'<br><a href="{esc(bomb["share_url"])}">打开参考视频</a></div>'
+        )
 
     name = acc["identity"].get("nickname", "该账号")
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -444,6 +456,16 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
 <h3>30 天优化动作</h3>
 <table><tr><th>优先级</th><th>要做什么</th><th>如何验收</th></tr>{action_rows}</table>
 <div class="card"><b>数据边界：</b>{esc(diagnosis['content_note'])}</div>
+
+<h3>对标参照与参考视频</h3>
+<div class="card"><b>本次对标：</b>{esc(benchmark_names)}<br>{esc(benchmark_signals)}</div>
+{reference_video or "<div class='card'>本次未取得可转写的参考视频；不以未核验视频内容作为改进依据。</div>"}
+<table><tr><th>诊断维度</th><th>对标时看什么</th><th>应用方式</th></tr>
+<tr><td>定位、人群、主页完整度</td><td>对标账号的昵称、简介、置顶内容是否在10秒内说清服务谁、解决什么问题、如何咨询</td><td>提炼表达结构，重写自己的主页与置顶内容</td></tr>
+<tr><td>内容结构、内容效率</td><td>参考视频的前3秒钩子、问题场景、证据顺序、结尾行动引导</td><td>拆成自己的选题模板，替换为已确认业务事实</td></tr>
+<tr><td>信任证明、转化准备度</td><td>是否展示实景、案例、过程、资质或客户常见问题，以及咨询入口</td><td>补充可核验证据与单一明确咨询动作，不虚构案例</td></tr>
+<tr><td>更新稳定度</td><td>对标账号的发布频率、栏目是否固定、内容是否可批量生产</td><td>设计可连续执行的周节奏，不追求偶发爆款</td></tr>
+</table>
 
 <h2>三、更新节奏</h2>
 <table><tr><th>月份</th><th>发布数</th></tr>{rows}</table>
