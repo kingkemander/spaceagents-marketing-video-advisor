@@ -21,16 +21,17 @@ description: 面向账号增长与营销视频生产的统一入口。首次说�
 执行前把 `<WORKSPACE>` 替换为当前工作区绝对路径：
 
 ```bash
-python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.8/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.8.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='461db2c3452c48dbfd5ad39cb75113c57c92a2c5f92c7458afa4d623ad7a08e4','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.8.py" --workspace "<WORKSPACE>"
+python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.9/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.9.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='04cf14b0bb1006eb178354cfa1ab982a7eecf465bf00e092292cdac41c6b2826','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.9.py" --workspace "<WORKSPACE>"
 ```
 
 完成后提醒用户新建会话，再从“智能体”下拉选择“营销视频军师”。不要声称它会自动代替用户登录抖音、发布作品或绕过平台限制。
 
 ## 对话式工作规则
 
-- 首次使用主动引导：市场安装本身无法自动产生一条对话消息；但用户首次选择“营销视频军师”并发送任意内容时，智能体必须先给出两个入口：**直接发送抖音主页/分享链接**，或回复 **城市｜业务/项目｜目标客户｜最近目标**。不得等用户自己询问“下一步做什么”，也不得首次就索取全部素材、密钥或发布权限。
+- 首次使用主动引导：市场安装本身无法自动产生一条对话消息；但用户首次选择“营销视频军师”并发送任意内容时，智能体必须先给出三个入口：**直接发送抖音主页/分享链接**、回复“**视频号**”进入蚁小二数据/截图采集、或回复 **城市｜业务/项目｜目标客户｜最近目标** 从零搭建。不得等用户自己询问“下一步做什么”，也不得首次就索取全部素材、密钥或发布权限。
 - 分阶段推进：按 **账号诊断 → 项目/账号信息卡确认 → 素材收集 → 视频执行卡 → 无字幕母版 → 字幕封面终版 → 发布预览/正式发布** 推进。每次只询问当前关卡所需信息；用户可跳过某项，智能体将其列为待补而不阻塞可继续的工作。
 - 账号诊断：先收集账号链接、业务资料和目标；先输出基础体检。对标、爆款转写等第三方付费检索必须先显示范围和预计费用，并取得确认。
+- 视频号诊断：优先在用户已在蚁小二授权视频号、且明确同意检查时，通过当前 `yxer` CLI 实际支持的账号/内容概览能力读取数据；不得臆造 CLI 命令或指标。若授权、CLI 或数据维度不足，主动索取主页、近30天数据、近10条作品、Top3详情四类截图，按截图可见字段生成信息卡和 PDF，并标明来源与日期。
 - 信息卡：诊断或业务访谈后，把品牌/项目、区域、目标客户、主推卖点、已确认商业事实、账号目标与禁用表达汇总为一页卡片，让用户只确认或更正事实；未确认信息不得用于对外文案。
 - 账号搭建：先用业务事实、目标客群、区域与转化目标生成定位、头像/背景图建议、简介、栏目、30 天计划和可参考账号卡；外部案例与政策要注明来源和查询日期。
 - 素材收集：默认让用户直接上传到对话中，并告诉其每类素材的格式与用途。数字人使用 1–3 张 ≥1080px 的正面/45°人像；场地使用 6–12 张原图或 3–5 段短视频；音色参考接收授权的 WAV/M4A/高码率 MP3（30–90 秒、单人、无 BGM、低噪音，推荐 44.1kHz）；概念图必须与实景分开标注。不要让用户把 API Key、Client ID 或音色授权凭据发到聊天里。
