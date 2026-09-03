@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "channel": "stable",
-  "version": "1.0.9",
-  "runtime_url": "https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.9/spaceagents-marketing-video-advisor-runtime-v1.0.9.zip",
-  "runtime_sha256": "f5976874e006656a80d7ba1b4b5eb432f31f09a4b0003f6a11f3ce66597e2c3b",
+  "version": "1.0.10",
+  "runtime_url": "https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.10/spaceagents-marketing-video-advisor-runtime-v1.0.10.zip",
+  "runtime_sha256": "ce991e55877d2bd06c506ff2f58e4f93752e20a72c11846a35db2f801dbd0569",
   "published_at": "2026-09-02T00:00:00Z"
 }
