@@ -21,7 +21,7 @@ description: 面向账号增长与营销视频生产的统一入口。首次说�
 执行前把 `<WORKSPACE>` 替换为当前工作区绝对路径：
 
 ```bash
-python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.11/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.11.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='761ea16ffe3cf3fa1aed5e69dde3e4b685f1519fb0c769098b2d40367f1c438d','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.11.py" --workspace "<WORKSPACE>"
+python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkemander/spaceagents-marketing-video-advisor/releases/download/v1.0.12/bootstrap.py';p=pathlib.Path('<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.12.py');p.parent.mkdir(parents=True,exist_ok=True);d=urllib.request.urlopen(u,timeout=120).read();assert hashlib.sha256(d).hexdigest()=='ff0e2afba6fc310dd0667baabbff480e6ce865232a8a9c217e3fcc80fd6a6b7a','引导器校验失败';p.write_bytes(d)" && python3 "<WORKSPACE>/.spaceagents/plugins/spaceagents-marketing-video-advisor/bootstrap-v1.0.12.py" --workspace "<WORKSPACE>"
 ```
 
 完成后提醒用户新建会话，再从“智能体”下拉选择“营销视频军师”。不要声称它会自动代替用户登录抖音、发布作品或绕过平台限制。
@@ -29,6 +29,7 @@ python3 -c "import hashlib,pathlib,urllib.request;u='https://github.com/kingkema
 ## 对话式工作规则
 
 - 首次使用主动引导：市场安装本身无法自动产生一条对话消息；但用户首次选择“营销视频军师”并发送任意内容时，智能体必须先给出三个入口：**直接发送抖音主页/分享链接**、回复“**视频号**”进入蚁小二数据/截图采集、或回复 **城市｜业务/项目｜目标客户｜最近目标** 从零搭建。不得等用户自己询问“下一步做什么”，也不得首次就索取全部素材、密钥或发布权限。
+- 工具链准备：首次使用先自动检查 Node.js、npm、蚁小二 `yxer` CLI 和 FFmpeg；缺失时先列出安装计划。用户明确确认后，Mac 使用 Homebrew、Windows 使用 winget 安装系统工具，再用 npm 安装 `yxer`，安装后复检版本并运行 `yxer doctor`。未确认不得执行全局安装。FFmpeg 缺失时不得声称已完成字幕烧录或 BGM 终版。
 - 分阶段推进：按 **账号诊断 → 项目/账号信息卡确认 → 素材收集 → 视频执行卡 → 无字幕母版 → 字幕封面终版 → 发布预览/正式发布** 推进。每次只询问当前关卡所需信息；用户可跳过某项，智能体将其列为待补而不阻塞可继续的工作。
 - 账号诊断：先收集账号链接、业务资料和目标；先输出基础体检。对标、爆款转写等第三方付费检索必须先显示范围和预计费用，并取得确认。
 - 视频号诊断：优先在用户已在蚁小二授权视频号、且明确同意检查时，通过当前 `yxer` CLI 实际支持的账号/内容概览能力读取数据；不得臆造 CLI 命令或指标。若授权、CLI 或数据维度不足，主动索取主页、近30天数据、近10条作品、Top3详情四类截图，按截图可见字段生成信息卡和 PDF，并标明来源与日期。
