@@ -266,6 +266,9 @@ def diagnose_account(acc, keyword):
     if top_ratio and top_ratio >= 4:
         efficiency_score -= 15  # 头部断层意味着可复制性不足
     conversion_score = 50 + (25 if has_contact else 0) + (15 if has_customer else 0) + (10 if has_offer else 0)
+    trust_score = 60 if has_offer and location_terms else 35 if has_offer else 20
+    audience_score = 70 if has_customer and business_terms else 35 if has_customer else 15
+    structure_score = max(20, min(90, efficiency_score + (15 if len(acc.get("top5", [])) >= 3 else 0)))
 
     risks = []
     actions = []
@@ -299,7 +302,7 @@ def diagnose_account(acc, keyword):
         "evidence": f"公开签名与 {len(videos)} 条作品标题中识别到：{('、'.join(business_terms[:5]) or '有效业务关键词不足')}。",
         "latest": latest.strftime("%Y-%m-%d") if latest else "未取得",
         "days_since": days_since,
-        "scores": [("定位清晰度", positioning_score), ("更新稳定度", cadence_score), ("内容效率", max(0, efficiency_score)), ("转化准备度", min(100, conversion_score))],
+        "scores": [("定位清晰度", positioning_score), ("目标人群明确度", audience_score), ("内容结构稳定度", structure_score), ("内容效率", max(0, efficiency_score)), ("信任证明", trust_score), ("更新稳定度", cadence_score), ("转化准备度", min(100, conversion_score)), ("主页信息完整度", min(100, positioning_score + (15 if has_offer else 0)))],
         "risks": risks,
         "actions": actions[:4],
         "content_note": "本报告的定位与问题判断仅依据接口返回的公开字段、作品标题、发布时间及互动数据；封面、画面品质、出镜表现和评论语义需在取得视频素材或逐条转写后再补充判断。",
@@ -421,7 +424,7 @@ def build_html(acc, benchmark, bomb, hot, keyword, costs):
   <h1>账号分析报告</h1>
   <div style="font-size:14px;color:#0f2f57;margin:6px 0 14px;">{esc(name)}</div>
   <div><span class="tag">账号体检</span><span class="tag">对标矩阵</span><span class="tag">爆款拆解</span><span class="tag">热点选题</span></div>
-  <div class="meta">生成时间：{now} ｜ 行业关键词：{esc(keyword)} ｜ 数据源：AutoApi 抖音接口<br>接口调用成本合计：¥{costs:.2f}</div>
+  <div class="meta">生成时间：{now} ｜ 行业关键词：{esc(keyword)} ｜ 数据源：AutoApi 抖音接口</div>
 </div>
 
 <h2>一、账号概览</h2>
